@@ -1,0 +1,46 @@
+name: Build CivicFix AI APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract uploaded package
+        run: |
+          unzip -q CivicFix-GitHub-Upload-Package.zip -d package
+          unzip -q package/civicfix-ai.zip -d project
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Build APK
+        working-directory: project
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY" > .env
+          gradle :app:assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CivicFix-AI-APK
+          path: project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
